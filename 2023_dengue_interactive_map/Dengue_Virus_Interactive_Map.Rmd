@@ -1,0 +1,175 @@
+---
+title: "Capstone Dengue Virus Interactive Map"
+output:
+  html_document:
+    df_print: paged
+---
+
+# 1. Read in the Dengue Virus Metadata
+```{r}
+setwd("/Users/yijunzhou/My Drive/Data Analysis_H2L2C/0816 Capstone_Dengue_Virus_Interactive_Map")
+library(tidyverse)
+combined_metadata <- as_tibble(read_tsv("/Users/yijunzhou/My Drive/Data Analysis_H2L2C/0816 Capstone_Dengue_Virus_Interactive_Map/20230727_dengue_patient_metadata_combined.tsv"))
+```
+
+# 2.Look at "combined_metadata"
+```{r}
+names(combined_metadata)
+head(combined_metadata)
+```
+
+# 3.Extract columns "Serotype" and "Location"
+```{r}
+sero_loc <- combined_metadata %>% select(Serotype, Location)
+head(sero_loc)
+```
+
+# 4.Visualize "sero_loc"
+```{r}
+ggplot(sero_loc, aes(x = Location)) + geom_bar() 
+ggplot(sero_loc, aes(x = Location, fill = Serotype)) + geom_bar() 
+# x axis is too cramped, too many locations to plot
+
+ggplot(sero_loc, aes(x = Serotype, fill = Serotype)) + geom_bar()
+# shows the number counts for each serotype
+```
+
+# 5.Separate "Locations" into "Continent" and "Countries"
+```{r}
+# how many distinct locations are there in the data frame?
+sero_loc %>% distinct(Location)   #need to tidy-up the data
+
+sero_cont_count <- separate(sero_loc,"Location", into = c("Continents","Countries"), sep = "/") %>% 
+  mutate(across(where(is.character), str_trim))  #remove the extra spaces in "Continents"and "Countries"
+head(sero_cont_count)
+```
+
+# 6.Serotype vs Continents
+```{r}
+ggplot(sero_cont_count, aes(x = Continents, fill = Serotype)) + 
+  geom_bar()   
+```
+
+# 7.Serotype vs Countries
+```{r, fig.height = 8, fig.width = 20}
+ggplot(sero_cont_count, aes(x = Countries, fill = Serotype)) + 
+  geom_bar() +              
+  theme (axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  labs(title = "Number of Sequences Based on Serotypes and Countries") +
+  ylab("Number of Reported Sequences") +
+  xlab("Countries")
+```
+
+# 8. Serotype vs Countries vs Continents + Legends
+```{r, fig.height = 10, fig.width = 20}
+ggplot(sero_cont_count, aes(x = Countries, fill = Serotype), xaxt) + 
+  geom_bar() +
+  facet_wrap(~Continents, nrow = 2) +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  labs(title = "Number of Sequences vs Serotypes vs Countries vs Continents") +
+  ylab("Number of Reported Sequences") +
+  xlab("Countries") +
+  theme(strip.text.x = element_text(size = 10))
+```
+
+# 9. Count the number of dengue virus data entries per country
+```{r}
+head(sero_cont_count)
+
+count_dengue <- sero_cont_count %>% 
+  select(Countries) %>% 
+  group_by(Countries) %>% 
+  count()
+
+head(count_dengue)
+```
+
+# 10. Prepare the geospatial data
+```{r}
+library(rgdal) # to read geospatial data into R
+library(sf) # to manipulate geospatial data
+
+# load geospatial data into R
+world_spdf <- readOGR( 
+  dsn= ("/Users/yijunzhou/My Drive/Data Analysis_H2L2C/0808 Leaflet Tutorial"), 
+  layer="TM_WORLD_BORDERS_SIMPL-0.3",
+  verbose=FALSE
+)
+```
+
+# 11. Merge the geospatial data with dengue virus counts based on country (count_dengue)
+```{r}
+# rename the count_dengue: n -> dengue
+colnames(count_dengue)[2] <- "dengue"
+
+# merge world_spdf@data with count_dengue using dplyr package
+# world_spdf_dengue <- world_spdf@data %>%
+#  left_join(. , count_dengue, by=c("NAME"="Countries")) # This is working, but the output is not spdf
+
+# need to fix some names in world_spdf
+count_dengue[131,1] <- "Viet Nam" #Vietnam
+count_dengue[65,1] <- "Lao People's Democratic Republic" #Laos
+count_dengue[109,1] <- "Korea, Republic of" #South Korea
+             
+
+# try merge from sp package, the first argument must be spdf
+world_spdf_dengue2 <- 
+  merge(world_spdf, count_dengue, by.x = "NAME", by.y = "Countries")
+
+# Note that if the number of dengue virus is NA, it is in fact 0
+world_spdf_dengue2@data$dengue[is.na(world_spdf_dengue2@data$dengue)] = 0.001
+world_spdf_dengue2@data$dengue <- as.numeric(as.character(world_spdf_dengue2@data$dengue))
+## use world_spdf_dengue2 to plot
+```
+
+# 12.Visualize the distribution of Dengue Virus per country
+```{r}
+world_spdf_dengue2@data %>% 
+  ggplot( aes(x=dengue)) + 
+    geom_histogram(bins=20, fill='#69b3a2', color='white') +
+    xlab("Total Dengue Virus Entries") + 
+    theme_bw()
+```
+
+# 13.Plot using leaflet choropleth map
+```{r}
+library(htmlwidgets) # to save widget in a html file
+library(leaflet) # to make the interactive map
+
+# Create a color palette with handmade bins.
+library(RColorBrewer)
+mybins <- c(0,5,10,50,500,1000,5000,Inf)
+mypalette <- colorBin( palette="YlOrBr", domain=world_spdf_dengue2@data$dengue, na.color="transparent", bins=mybins)
+
+# Prepare the text for tooltips:
+mytext <- paste(
+    "Country: ", world_spdf_dengue2@data$NAME,"<br/>", 
+    "Area: ", world_spdf_dengue2@data$AREA, "<br/>", 
+    "Dengue Virus Entries: ", round(world_spdf_dengue2@data$dengue, 2), 
+    sep="") %>%
+  lapply(htmltools::HTML)
+
+# Final Map
+m <- leaflet(world_spdf_dengue2) %>% 
+  addTiles()  %>% 
+  setView( lat=10, lng=0 , zoom=2) %>%
+  addPolygons( 
+    fillColor = ~mypalette(dengue), 
+    stroke=TRUE, 
+    fillOpacity = 0.9, 
+    color="white", 
+    weight=0.3,
+    label = mytext,
+    labelOptions = labelOptions( 
+      style = list("font-weight" = "normal", padding = "3px 8px"), 
+      textsize = "13px", 
+      direction = "auto"
+    )
+  ) %>%
+  addLegend( pal=mypalette, values=~dengue, opacity=0.9, title = "Dengue Virus Entries", position = "bottomleft" )
+m
+
+#saveWidget(m, file="/Users/yijunzhou/My Drive/Data Analysis_H2L2C/0816 Capstone_Dengue_Virus_Interactive_Map/dengue_map1.html")
+
+```
+
