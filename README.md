@@ -8,8 +8,8 @@ Package "tidyverse" is almost always used. Task unique packages will be listed i
 
 ## 1. 2023_NTA_boxplot
 This is a small visualization task utilizing data from real lab experiments.
-Keyword: html, boxplot, barplot, hrbrthemes, viridis.
+\nKeyword: html, boxplot, barplot, hrbrthemes, viridis.
 
 ## 2.2023_dengue_interactive_map
 A interactive map using the geospatial package to plot GISAID data on Dengue virus.
-Keyword: html, Rmd, GISAID, Dengue, barplot, facet_wrap, rgdal, sf, htmlwidgets, leaflet, RcolorBrewer 
+\nKeyword: html, Rmd, GISAID, Dengue, barplot, facet_wrap, rgdal, sf, htmlwidgets, leaflet, RcolorBrewer 
