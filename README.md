@@ -1,4 +1,4 @@
-# R Example
+# R Examples
 This is a collection of R codes written for specific tasks or capstone projects and organized as one task or project per folder.  
 Usually there will be a .html and a R markdone file along with it. But sometimes I forget one of them.  
 
