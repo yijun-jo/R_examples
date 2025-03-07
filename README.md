@@ -1,6 +1,5 @@
 # R Examples
-This is a collection of R codes written for specific tasks or capstone projects and organized as one task or project per folder.  
-Usually there will be a .html and a R markdone file along with it. But sometimes I forget one of them.  
+A collection of R codes written for specific tasks or capstone projects and organized as one task or project per folder. Usually there will be a .html and a R markdone file along with it. But sometimes I forget one of them.  
 
 Package "tidyverse" is almost always used. Task unique packages will be listed in the keywords.  
 Good luck!
