@@ -1,10 +1,9 @@
 # Introduction
-This is a collection of R codes written for specific tasks or capstone projects and organized as one task or project per folder. 
-Usually there will be a .html as a final knit from a successfully excuted R markdone document.
-Therefore there should also be a R markdone file along with it. But sometimes I forget about uploading it. 
-Html should do the job anyway. 
+This is a collection of R codes written for specific tasks or capstone projects and organized as one task or project per folder.  
+Usually there will be a .html and a R markdone file along with it. But sometimes I forget one of them.  
 
-Package "tidyverse" is almost always used. Task unique packages will be listed in the keywords. 
+Package "tidyverse" is almost always used. Task unique packages will be listed in the keywords.  
+Good luck!
 
 ### 1. 2023_NTA_boxplot
 This is a small visualization task utilizing data from real lab experiments.<br>
