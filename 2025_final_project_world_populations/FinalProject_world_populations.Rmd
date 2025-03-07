@@ -1,0 +1,113 @@
+---
+title: "Final project"
+author: "jinxout"
+date: "2025-03-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# a setup chunk that won't be included in the final document
+knitr::opts_chunk$set(echo = TRUE) # show the R code below in the final document
+```
+
+```{r}
+# prepare coding environment
+library(tidyverse) # import package tidyverse
+rm(list = ls()) # clean up the workspace
+```
+
+```{r}
+# read in the "population" data and look at the first few rows
+long_population = read.csv("population.csv", sep = ",")
+head(long_population)
+```
+```{r}
+colnames(long_population)<- c("country", "year", "population")
+head(long_population)
+```
+
+```{r}
+# plot the population over time
+ggplot(long_population, aes(x = year, y = population, color = country)) + 
+  geom_line(show.legend = FALSE) + # hide the legend since it's too big
+  labs(title = "Population over time", x = "Year", y = "Population")
+```
+# There are too many countries to plot all of them in one graph. Let's focus on the top 10 countries with the largest population in 2023.
+## First, let's check the basic information of the dataset.
+```{r}
+# check up the basics of the dataset
+num_country = length(unique(long_population$country))
+num_years = length(unique(long_population$year))
+summary = summary(long_population)
+summary
+```
+
+## Second, let's find the top 10 countries with the largest population in 2023.
+```{r}
+# rank the countries by the population size in 2023
+population_2023 = long_population %>%
+  filter(year == 2023) %>%
+  arrange(desc(population))
+head(population_2023)
+```
+
+## Third, let's remove the entries that are not referring to a specific country.
+```{r}
+# remove those are not referring to a specific country
+# first, read-in world country names
+ountries_of_the_world = read.csv("countries_of_the_world.csv")
+head(ountries_of_the_world)
+```
+```{r}
+# select only the column named "Country"
+world_country_names = ountries_of_the_world$Country
+head(world_country_names)
+```
+```{r}
+#Remove spaces from the country names
+world_country_names = gsub(" ", "", world_country_names)
+head(world_country_names)
+```
+```{r}
+#Remove spaces from column "country" in population_2023
+population_2023$country = gsub(" ", "", population_2023$country)
+
+# filter out the countries that are not in the world_country_names
+country_population_2023 = population_2023 %>%
+  filter(population_2023$country %in% world_country_names)
+head(country_population_2023)
+num_country_2023 = length(unique(country_population_2023$country))
+```
+
+## Fourth, let's plot the population of the top 10 countries with the largest population in 2023.
+```{r}
+# plot the population of the top 10 countries with the largest population in 2023
+top_10_countries = country_population_2023 %>%
+  top_n(10, population) %>%
+  arrange(desc(population))
+head(top_10_countries)
+```
+```{r}
+# create a bar plot
+ggplot(top_10_countries, aes(x = reorder(country, -population), y = population, fill = country)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 10 countries with the largest population in 2023", x = "Country", y = "Population") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+```{r}
+# extract data from "long_population" for the top 10 countries
+top_10_country_names = unique(top_10_countries$country) # create a list of names unique to the top 10 countries
+head(top_10_country_names)
+```
+```{r}
+# remove spaces from the country names in "long_population"
+long_population$country = gsub(" ", "", long_population$country)
+
+top_10_population = long_population %>%
+  filter(country %in% top_10_country_names) # filter out the data for the top 10 countries
+
+# plot the population over time for the top 10 countries
+ggplot(top_10_population, aes(x = year, y = population, color = country)) +
+  geom_line() +
+  labs(title = "Population over time for the top 10 countries", x = "Year", y = "Population")
+```
