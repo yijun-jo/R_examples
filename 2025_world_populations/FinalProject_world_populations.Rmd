@@ -1,6 +1,6 @@
 ---
-title: "Final project"
-author: "jinxout"
+title: "STAT101 Final Project: "
+author: "Yijun Zhou"
 date: "2025-03-05"
 output: html_document
 ---
@@ -32,7 +32,9 @@ ggplot(long_population, aes(x = year, y = population, color = country)) +
   geom_line(show.legend = FALSE) + # hide the legend since it's too big
   labs(title = "Population over time", x = "Year", y = "Population")
 ```
-# There are too many countries to plot all of them in one graph. Let's focus on the top 10 countries with the largest population in 2023.
+<br>
+There are too many countries to plot all of them in one graph. Let's focus on the top 10 countries with the largest population in 2023.  
+
 ## First, let's check the basic information of the dataset.
 ```{r}
 # check up the basics of the dataset
@@ -55,12 +57,20 @@ head(population_2023)
 ```{r}
 # remove those are not referring to a specific country
 # first, read-in world country names
-ountries_of_the_world = read.csv("countries_of_the_world.csv")
-head(ountries_of_the_world)
+countries_of_the_world = read.csv("countries_of_the_world.csv")
+head(countries_of_the_world)
+
+# remove spaces from the country names
+countries_of_the_world$Country = gsub(" ", "", countries_of_the_world$Country)
+head(countries_of_the_world)
+
+# remove spaces flanking the region names
+countries_of_the_world$Region = gsub("^\\s+|\\s+$", "", countries_of_the_world$Region)
+head(countries_of_the_world)
 ```
 ```{r}
 # select only the column named "Country"
-world_country_names = ountries_of_the_world$Country
+world_country_names = countries_of_the_world$Country
 head(world_country_names)
 ```
 ```{r}
@@ -82,21 +92,25 @@ num_country_2023 = length(unique(country_population_2023$country))
 ## Fourth, let's plot the population of the top 10 countries with the largest population in 2023.
 ```{r}
 # plot the population of the top 10 countries with the largest population in 2023
-top_10_countries = country_population_2023 %>%
+top_10_populations_2023 = country_population_2023 %>%
   top_n(10, population) %>%
   arrange(desc(population))
-head(top_10_countries)
+head(top_10_populations_2023)
+```
+```{r}
+# save the top 10 countries with the largest population in 2023 to a file
+write.csv(top_10_populations_2023, "top_10_populations_2023.csv", row.names = FALSE)
 ```
 ```{r}
 # create a bar plot
-ggplot(top_10_countries, aes(x = reorder(country, -population), y = population, fill = country)) +
+ggplot(top_10_populations_2023, aes(x = reorder(country, -population), y = population, fill = country)) +
   geom_bar(stat = "identity") +
   labs(title = "Top 10 countries with the largest population in 2023", x = "Country", y = "Population") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 ```{r}
 # extract data from "long_population" for the top 10 countries
-top_10_country_names = unique(top_10_countries$country) # create a list of names unique to the top 10 countries
+top_10_country_names = unique(top_10_populations_2023$country) # create a list of names unique to the top 10 countries
 head(top_10_country_names)
 ```
 ```{r}
@@ -111,3 +125,169 @@ ggplot(top_10_population, aes(x = year, y = population, color = country)) +
   geom_line() +
   labs(title = "Population over time for the top 10 countries", x = "Year", y = "Population")
 ```
+## Fifth, let's extract country names from "countries_of_the_world" for each region.
+```{r}
+# count unique entries in "Region" column in "countries_of_the_world".
+unique_regions = unique(countries_of_the_world$Region)
+num_region = length(unique_regions)
+# list all the unique regions
+unique_regions
+```
+```{r}
+# extract names of countries from "countries_of_the_world" based on each region
+countries_by_region = list() # create an empty list to store the names of countries for each region
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  countries = countries_of_the_world %>%
+    filter(Region == region) %>%
+    select(Country) %>%
+    unlist() # extract the names of countries for the region
+  countries_by_region[[region]] = countries
+}
+
+# remove spaces from the country names
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  countries = countries_by_region[[region]]
+  countries = gsub(" ", "", countries)
+  countries_by_region[[region]] = countries
+}
+
+# for each region, extract the data from "long_population"
+population_by_region = list() # create an empty list to store the data for each region
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  countries = countries_by_region[[region]]
+  population = long_population %>%
+    filter(country %in% countries) # extract the data for the countries in the region
+  population_by_region[[region]] = population
+}
+
+# check the data for the first region
+head(population_by_region[[1]])
+
+# save the data for each region to a file
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  population = population_by_region[[region]]
+  write.csv(population, paste(region, ".csv"), row.names = FALSE)
+}
+```
+## Sixth, let's plot the population over time for each region.
+```{r}
+# plot the population over time for each region and save the plots
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  population = population_by_region[[region]]
+  plot = ggplot(population, aes(x = year, y = population, color = country)) +
+    geom_line() +
+    labs(title = paste("Population over time for", region), x = "Year", y = "Population")
+  ggsave(paste(region, ".png"), plot) 
+}
+
+# make facet plots for all regions
+# combine the data for all regions and add a column for the region
+all_regions = bind_rows(population_by_region, .id = "Region")
+ggplot(all_regions, aes(x = year, y = population, color = country)) +
+  geom_line(show.legend = FALSE) +
+  labs(title = "Population over time for all regions", x = "Year", y = "Population") +
+  facet_wrap(~Region)
+```
+## Seventh, let's calculate the total population for each region in 2023.
+```{r}
+# calculate the total population for each region in 2023
+total_population_region_2023 = list() # create an empty list to store the total population for each region
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  population = population_by_region[[region]]
+  total = sum(population$population[population$year == 2023])
+  total_population_region_2023[[region]] = total
+}
+
+# create a data frame for the total population in 2023
+total_population_region_2023_df = data.frame(Region = unique_regions, total_population_region_2023 = unlist(total_population_region_2023))
+total_population_region_2023_df
+
+# save the total population in 2023 for each region to a file
+write.csv(total_population_region_2023_df, "total_population_region_2023.csv", row.names = FALSE)
+```
+
+```{r}
+# create a bar plot for the total population in 2023 for each region
+ggplot(total_population_region_2023_df, aes(x = reorder(Region, -total_population_region_2023), y = total_population_region_2023, fill = Region)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total population in 2023 for each region", x = "Region", y = "Total Population") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## Eighth, let's calculate the average population growth rate for each region.
+```{r}
+# calculate the average population growth rate for each region
+average_growth_rate = list() # create an empty list to store the average growth rate for each region
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  population = population_by_region[[region]]
+  growth_rate = (population$population[population$year == 2023] - population$population[population$year == 2000]) / 23
+  average = mean(growth_rate)
+  average_growth_rate[[region]] = average
+}
+
+# create a data frame for the average growth rate for each region
+average_growth_rate_df = data.frame(Region = unique_regions, Average_Growth_Rate = unlist(average_growth_rate))
+write.csv(average_growth_rate_df, "average_growth_rate(2000-2023).csv", row.names = FALSE)
+
+# create a bar plot for the average growth rate for each region
+ggplot(average_growth_rate_df, aes(x = reorder(Region, -Average_Growth_Rate), y = Average_Growth_Rate, fill = Region)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average growth rate between 2000 and 2023", x = "Region", y = "Population Per Year") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+## Ninth, let's do some statistical analysis on the population data.
+```{r}
+# calculate the mean and standard deviation of the population per country of each region in 2023
+mean_population_2023 = list() # create an empty list to store the mean population for each region
+sd_population_2023 = list() # create an empty list to store the standard deviation of the population for each region
+for (i in 1:num_region) {
+  region = unique_regions[i]
+  population = population_by_region[[region]]
+  mean = mean(population$population[population$year == 2023])
+  sd = sd(population$population[population$year == 2023])
+  mean_population_2023[[region]] = mean
+  sd_population_2023[[region]] = sd
+}
+
+# create a data frame for the mean and standard deviation of the population in 2023 for each region
+population_stats_2023_df = data.frame(Region = unique_regions, Mean_Population_2023 = unlist(mean_population_2023), SD_Population_2023 = unlist(sd_population_2023))
+head(population_stats_2023_df)
+```
+```{r}
+write.csv(population_stats_2023_df, "population_stats_region_2023.csv", row.names = FALSE)
+```
+
+
+```{r}
+# create a boxplot of the mean population in 2023 for each region
+ggplot(population_stats_2023_df, aes(x = Region, y = Mean_Population_2023, fill = Region)) +
+  geom_boxplot() +
+  labs(title = "Mean population in 2023 for each region", x = "Region", y = "Mean Population") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+# perform ANOVA test to compare if the mean population in 2023 is significantly different among regions
+anova_test = aov(Mean_Population_2023 ~ Region, data = population_stats_2023_df)
+anova_test
+```
+```{r}
+# check the assumptions of ANOVA
+qqnorm(residuals(anova_test))
+```
+
+```{r}
+# perform Tukey's HSD test to compare the mean population in 2023 between each pair of regions
+tukey_test = TukeyHSD(anova_test)
+tukey_test
+```
+
+
+
