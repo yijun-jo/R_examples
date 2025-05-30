@@ -1,0 +1,98 @@
+---
+title: "Social media data analysis"
+author: "Yijun Zhou"
+date: "2025-03-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is an analysis of social media data from kaggle: https://www.kaggle.com/datasets/atharvasoundankar/viral-social-media-trends-and-engagement-analysis
+
+As part of the STAT 101 class, I will:<br>
+1. Run a statical analysis on the data. <br>
+2. Make a visualization of the data. <br>
+3. Record a presentation of the analysis. <br>
+
+## First, let's read-in the data
+```{r}
+# read-in the dataset from the csv file "viral_social_media_trends.csv"
+social_media_data <- read.csv("viral_social_media_trends.csv")
+
+# check the first few rows of the dataset
+head(social_media_data)
+```
+
+## Second, prepare the coding environment
+```{r}
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+```
+
+
+## Third, make a visualization of the data to check the distribution of "Likes" per "Platform".
+```{r}
+# create a boxplot of "Platform" and "Likes"
+social_media_data %>%
+  ggplot( aes(x=Platform, y=Likes)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option = "magma") +
+  geom_jitter(color="blue", size=0.4, alpha=0.9) +
+  theme_ipsum(grid = TRUE, axis = TRUE,axis_col = "black") +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11),
+    axis.title.y = element_text(vjust = 5, hjust = 0.5)
+  ) +
+  ggtitle("Viral Social Media Likes Per Platform") +
+  xlab("Platform") + 
+  ylab("Likes")
+```
+
+## How about the distribution of "Shares" per "Likes"?
+```{r}
+# create a scatterplot of "Likes" and "Shares"
+social_media_data %>%
+  ggplot( aes(x=Likes, y=Shares)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option = "magma") +
+  theme_ipsum(grid = TRUE, axis = TRUE,axis_col = "black") +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11),
+    axis.title.y = element_text(vjust = 5, hjust = 0.5)
+  ) +
+  ggtitle("Viral Social Media Likes vs Shares") +
+  xlab("Likes") + 
+  ylab("Shares")
+```
+```{r}
+# create a densityplot of "Likes" and "Shares"
+social_media_data %>%
+  ggplot( aes(x=Likes, fill=Shares)) +
+  geom_density(alpha=0.6) +
+  scale_x_log10() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option = "magma") +
+  theme_ipsum(grid = TRUE, axis = TRUE,axis_col = "black") +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11),
+    axis.title.y = element_text(vjust = 5, hjust = 0.5)
+  ) +
+  ggtitle("Viral Social Media Likes vs Shares") +
+  xlab("Likes") + 
+  ylab("Shares")
+```
+
+
+## Fourth, calculate the correlations
+```{r}
+cor.test(social_media_data$Likes, social_media_data$Shares, method = "spearman")
+```
+
